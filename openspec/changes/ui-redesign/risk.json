@@ -1,0 +1,13 @@
+{
+  "level": "L2",
+  "reasons": [
+    "User-visible Kanban UI behavior and task data model changes"
+  ],
+  "higherRiskExclusions": [
+    "No authentication or authorization changes",
+    "No database schema changes",
+    "No external API or production configuration changes"
+  ],
+  "profiles": [],
+  "rollback": "Revert the UI redesign changes and keep the backward-compatible optional task fields unused"
+}

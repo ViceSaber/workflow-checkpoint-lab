@@ -1,0 +1,14 @@
+{
+  "level": "L2",
+  "reasons": [
+    "User-visible task detail behavior and browser-local persistence changes",
+    "Application dependency addition for Markdown rendering"
+  ],
+  "higherRiskExclusions": [
+    "No authentication or authorization changes",
+    "No backend database or production data changes",
+    "No external API or production configuration changes"
+  ],
+  "profiles": [],
+  "rollback": "Revert the task detail components, dependency addition, and optional persisted fields"
+}

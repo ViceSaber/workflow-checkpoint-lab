@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TOOL_DIR="$(basename "$(cd "$SCRIPT_DIR/.." && pwd)")"
+PROJECT_DIR="${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-}}"
+if [ -z "$PROJECT_DIR" ]; then
+  PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+fi
+
+USING_SUPERPOWERS="$PROJECT_DIR/$TOOL_DIR/skills/using-superpowers/SKILL.md"
+
+node - "$TOOL_DIR" "$USING_SUPERPOWERS" <<'NODE'
+const fs = require('fs');
+
+const [toolDir, usingSuperpowers] = process.argv.slice(2);
+const message = fs.existsSync(usingSuperpowers)
+  ? fs.readFileSync(usingSuperpowers, 'utf8')
+  : `Project-local Superpowers bootstrap is missing: ${usingSuperpowers}`;
+const additionalContext = [
+  '<EXTREMELY_IMPORTANT>',
+  `This project has project-local Superpowers skills under ${toolDir}/skills.`,
+  '',
+  'Use callable Superpowers skills when they are available. If a slash skill is unavailable, read the matching project-local SKILL.md and follow it manually. Do not claim a skill was invoked unless it actually was.',
+  '',
+  `Below is the full content of ${toolDir}/skills/using-superpowers/SKILL.md:`,
+  '',
+  message,
+  '</EXTREMELY_IMPORTANT>',
+].join('\n');
+
+process.stdout.write(`${JSON.stringify({
+  hookSpecificOutput: {
+    hookEventName: 'SessionStart',
+    additionalContext,
+  },
+}, null, 2)}\n`);
+NODE

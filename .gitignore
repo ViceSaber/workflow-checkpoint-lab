@@ -1,0 +1,13 @@
+# AI workflow local artifacts
+.ai-workflow-backups/
+.superpowers/
+
+# Common generated artifacts
+node_modules/
+dist/
+coverage/
+.DS_Store
+.idea/
+.claude/workflow-checkpoints.local.json
+.claude/workflow-audit.local.jsonl
+.claude/workflow-checkpoints.local.lock/

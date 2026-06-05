@@ -1,0 +1,415 @@
+#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const {
+  activeChanges,
+  appendAudit,
+  readImplementationScope,
+  readJson,
+  readRisk,
+  redactShellCommand,
+} = require('./workflow-hook-lib');
+
+const installedProjectDir = path.resolve(__dirname, '..', '..');
+const projectDir = path.resolve(process.env.CODEX_PROJECT_DIR || process.env.CLAUDE_PROJECT_DIR || installedProjectDir);
+const statePath = path.join(projectDir, '.claude', 'workflow-checkpoints.local.json');
+
+function deny(reason, details = {}) {
+  appendAudit(projectDir, {
+    agent: process.env.CODEX_PROJECT_DIR ? 'codex' : 'claude',
+    event: 'tool.denied',
+    change,
+    decision: 'denied',
+    reason,
+    ...details,
+  }, { maxWaitMs: 200 });
+  console.log(JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: 'PreToolUse',
+      permissionDecision: 'deny',
+      permissionDecisionReason: reason,
+    },
+  }));
+}
+
+function relativeProjectPath(file) {
+  const resolved = path.resolve(projectDir, file || '');
+  const relative = path.relative(projectDir, resolved);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
+  return relative.split(path.sep).join('/');
+}
+
+function isWithin(file, root) {
+  return file === root || file.startsWith(`${root}/`);
+}
+
+const input = readJson(0, {});
+const toolName = typeof input.tool_name === 'string' ? input.tool_name.split('.').pop() : '';
+const rawToolInput = input.tool_input;
+const toolInput = rawToolInput && typeof rawToolInput === 'object' ? rawToolInput : {};
+const changes = activeChanges(projectDir);
+const state = readJson(statePath, { changes: {} });
+const change = changes.includes(state.activeChange)
+  ? state.activeChange
+  : null;
+const approvedCheckpoint = change
+  ? Number(state.changes?.[change]?.approvedCheckpoint) || 0
+  : 0;
+const changeState = change ? (state.changes?.[change] || {}) : {};
+let implementationScopeResult;
+
+function isBrainstormingContent(file) {
+  if (!isWithin(file, '.superpowers/brainstorm')) return false;
+  const contentIdx = file.indexOf('/content/');
+  if (contentIdx < 0) return false;
+  const ext = file.slice(file.lastIndexOf('.'));
+  return ['.html', '.css', '.js', '.json', '.md'].includes(ext);
+}
+
+const OPENSPEC_CHANGE_TOP = ['proposal.md', 'design.md', 'tasks.md', 'risk.json'];
+const OPENSPEC_CHANGE_POST_CP1 = [
+  'implementation-plan.md',
+  'test-plan.md',
+  'risk-notes.md',
+  'implementation-scope.json',
+];
+
+function isAllowedArtifact(file) {
+  if (!file) return false;
+  if (isBrainstormingContent(file)) return true;
+  if (isWithin(file, 'docs/superpowers/specs') && file.endsWith('.md')) return true;
+  if (approvedCheckpoint >= 1 && isWithin(file, 'docs/superpowers/plans') && file.endsWith('.md')) return true;
+  const match = file.match(/^openspec\/changes\/[^/]+\/(.+)$/);
+  if (match) {
+    const sub = match[1];
+    if (OPENSPEC_CHANGE_TOP.includes(sub)) return true;
+    if (/^specs\/(?:.+\/)?spec\.md$/.test(sub)) return true;
+    if (approvedCheckpoint >= 1 && OPENSPEC_CHANGE_POST_CP1.includes(sub)) return true;
+  }
+  return false;
+}
+
+function implementationDeniedReason() {
+  return approvedCheckpoint >= 1
+    ? 'Checkpoint 2 approval is required before implementation changes.'
+    : 'Checkpoint 1 approval is required before implementation planning, and Checkpoint 2 approval is required before implementation changes.';
+}
+
+function implementationAuthorizationFailure() {
+  if (approvedCheckpoint < 2) return implementationDeniedReason();
+
+  const riskResult = readRisk(projectDir, change);
+  if (riskResult.error) {
+    return `Implementation authorization is invalid: ${riskResult.error} Rebuild risk.json and re-approve Checkpoint 1.`;
+  }
+  if (changeState.riskFingerprint !== riskResult.fingerprint) {
+    return 'Implementation authorization is invalid: risk.json changed. Re-approve Checkpoint 1.';
+  }
+  const scopeResult = getImplementationScopeResult();
+  if (scopeResult.error) {
+    return `Implementation authorization is invalid: ${scopeResult.error} Rebuild implementation-scope.json and re-approve Checkpoint 2.`;
+  }
+  if (changeState.implementationScopeFingerprint !== scopeResult.fingerprint) {
+    return 'Implementation authorization is invalid: implementation-scope.json changed. Re-approve Checkpoint 2.';
+  }
+  if (riskResult.risk.level === 'L4') {
+    return 'Implementation authorization is denied: L4 changes are analysis and remediation proposal only.';
+  }
+  if (riskResult.risk.level === 'L3' && changeState.riskApproval?.fingerprint !== riskResult.fingerprint) {
+    return `Implementation authorization is denied: reply with CHECKPOINT APPROVE RISK ${change} first.`;
+  }
+  return null;
+}
+
+function getImplementationScopeResult() {
+  if (!implementationScopeResult) {
+    implementationScopeResult = readImplementationScope(projectDir, change);
+  }
+  return implementationScopeResult;
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+}
+
+function globToRegex(glob) {
+  const parts = glob.split(/(\*\*|\*)/g).map((part) => {
+    if (part === '**') return '.*';
+    if (part === '*') return '[^/]*';
+    return escapeRegex(part);
+  });
+  return new RegExp(`^${parts.join('')}$`);
+}
+
+function isFileAllowedByScope(file, scope) {
+  return scope.allowedFiles.includes(file) ||
+    scope.allowedDirs.some((dir) => isWithin(file, dir)) ||
+    scope.allowedGlobs.some((glob) => globToRegex(glob).test(file));
+}
+
+function anchorsForFile(file, scope) {
+  return scope.anchors[file] || [];
+}
+
+function changedRegionFromContent(file, nextContent) {
+  if (typeof nextContent !== 'string') return '';
+  let previousContent = '';
+  try {
+    previousContent = fs.readFileSync(path.join(projectDir, file), 'utf8');
+  } catch {
+    return nextContent;
+  }
+  if (previousContent === nextContent) return '';
+
+  const previous = previousContent.split(/\r?\n/);
+  const next = nextContent.split(/\r?\n/);
+  let prefix = 0;
+  while (prefix < previous.length && prefix < next.length && previous[prefix] === next[prefix]) {
+    prefix += 1;
+  }
+  let suffix = 0;
+  while (
+    suffix < previous.length - prefix &&
+    suffix < next.length - prefix &&
+    previous[previous.length - 1 - suffix] === next[next.length - 1 - suffix]
+  ) {
+    suffix += 1;
+  }
+  const nextEnd = next.length - suffix;
+  const previousEnd = previous.length - suffix;
+  const start = Math.max(0, prefix - 3);
+  return [
+    ...previous.slice(start, Math.min(previous.length, previousEnd + 3)),
+    ...next.slice(start, Math.min(next.length, nextEnd + 3)),
+  ].join('\n');
+}
+
+function changedRegionForTool(file, toolName, toolInput, fallbackText = '') {
+  if (toolName === 'Write') return changedRegionFromContent(file, toolInput.content);
+  if (toolName === 'Edit') {
+    return [toolInput.old_string, toolInput.new_string].filter((value) => typeof value === 'string').join('\n');
+  }
+  if (toolName === 'MultiEdit' && Array.isArray(toolInput.edits)) {
+    return toolInput.edits
+      .flatMap((edit) => [edit.old_string, edit.new_string])
+      .filter((value) => typeof value === 'string')
+      .join('\n');
+  }
+  return fallbackText;
+}
+
+function implementationScopeFailure(file, changedText) {
+  const authorizationFailure = implementationAuthorizationFailure();
+  if (authorizationFailure) return authorizationFailure;
+
+  const scope = getImplementationScopeResult().scope;
+  if (!isFileAllowedByScope(file, scope)) {
+    return `Implementation target is outside the approved scope for ${change}: ${file}`;
+  }
+  const anchors = anchorsForFile(file, scope);
+  if (anchors.length > 0 && !changedText) {
+    return `Implementation target requires anchor-scoped evidence for ${change}: ${file}`;
+  }
+  if (anchors.length > 0 && !anchors.some((anchor) => changedText.includes(anchor))) {
+    return `Implementation change does not touch an approved anchor for ${change}: ${file}`;
+  }
+  return null;
+}
+
+function auditAllowed(details = {}) {
+  appendAudit(projectDir, {
+    agent: process.env.CODEX_PROJECT_DIR ? 'codex' : 'claude',
+    event: 'tool.allowed',
+    change,
+    decision: 'allowed',
+    ...details,
+  }, { maxWaitMs: 200 });
+}
+
+function outsideProjectTargetReason() {
+  return 'Tool target is outside the project directory.';
+}
+
+function isAllowedDiscoveryCommand(command) {
+  if (/^find(?:\s+\S+)+$/.test(command)) {
+    return !/(?:^|\s)-(?:delete|exec|execdir|ok|okdir|fprint|fprint0|fprintf|fls)(?:=|\s|$)/.test(command);
+  }
+  if (/^tree(?:\s+\S+)*$/.test(command)) {
+    return !/(?:^|\s)(?:-o|--output)(?:=|\s|$)/.test(command);
+  }
+  return false;
+}
+
+function splitShellWords(command) {
+  const words = [];
+  let current = '';
+  let quote = null;
+  for (const char of command) {
+    if (char === '\\') return null;
+    if (quote) {
+      if (char === quote) {
+        quote = null;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+    } else if (/\s/.test(char)) {
+      if (current) {
+        words.push(current);
+        current = '';
+      }
+    } else {
+      current += char;
+    }
+  }
+  if (quote) return null;
+  if (current) words.push(current);
+  return words;
+}
+
+function isAllowedArtifactMkdirCommand(command) {
+  const words = splitShellWords(command);
+  if (!words || words.length !== 3 || words[0] !== 'mkdir' || words[1] !== '-p') return false;
+  const target = relativeProjectPath(words[2]);
+  if (!target) return false;
+  return isWithin(target, 'openspec/changes') ||
+    isWithin(target, 'docs/superpowers/specs') ||
+    (approvedCheckpoint >= 1 && isWithin(target, 'docs/superpowers/plans'));
+}
+
+const BRAINSTORM_SCRIPT_SUFFIX = '.claude/skills/brainstorming/scripts/start-server.sh';
+const BRAINSTORM_CONTENT_EXTS = ['.html', '.css', '.js', '.json', '.md'];
+
+function stripMatchingQuotes(value) {
+  if (
+    typeof value === 'string' &&
+    ((value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'")))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value;
+}
+
+function isAllowedBrainstormingServer(command) {
+  let rest = command.startsWith('bash ') ? command.slice(5) : command;
+  const dirFlag = ' --project-dir ';
+  const dirIdx = rest.indexOf(dirFlag);
+  let scriptRaw, dirRaw = null;
+  if (dirIdx >= 0) {
+    scriptRaw = rest.slice(0, dirIdx);
+    dirRaw = rest.slice(dirIdx + dirFlag.length);
+  } else {
+    scriptRaw = rest;
+  }
+  scriptRaw = stripMatchingQuotes(scriptRaw);
+  const resolvedScript = path.resolve(projectDir, scriptRaw);
+  const expectedScript = path.join(projectDir, BRAINSTORM_SCRIPT_SUFFIX);
+  if (resolvedScript !== expectedScript) return false;
+  if (dirRaw !== null) {
+    const dirValue = stripMatchingQuotes(dirRaw);
+    const resolvedDir = path.resolve(dirValue);
+    if (resolvedDir !== projectDir) return false;
+  }
+  return true;
+}
+
+function isAllowedTmpBrainstorming(rawFilePath) {
+  if (!rawFilePath || typeof rawFilePath !== 'string') return false;
+  const resolved = path.resolve(rawFilePath);
+  const match = resolved.match(/^(?:\/tmp|\/private\/tmp)\/brainstorm-[^/]+\/content\/[^/]+$/);
+  if (!match) return false;
+  const ext = resolved.slice(resolved.lastIndexOf('.'));
+  return BRAINSTORM_CONTENT_EXTS.includes(ext);
+}
+
+if (['Write', 'Edit', 'MultiEdit'].includes(toolName)) {
+  const file = relativeProjectPath(toolInput.file_path);
+
+  if (!file && isAllowedTmpBrainstorming(toolInput.file_path)) {
+    appendAudit(projectDir, {
+      agent: process.env.CODEX_PROJECT_DIR ? 'codex' : 'claude',
+      event: 'tool.tmp-brainstorming-allowed',
+      change,
+      decision: 'allowed',
+      reason: 'brainstorming fallback to /tmp; recommend using --project-dir',
+    }, { maxWaitMs: 200 });
+  } else if (!file) {
+    deny(outsideProjectTargetReason(), { tool: toolName, targets: [] });
+  } else if (!isAllowedArtifact(file)) {
+    const changedText = changedRegionForTool(file, toolName, toolInput);
+    const failure = implementationScopeFailure(file, changedText);
+    if (failure) {
+      deny(failure, { tool: toolName, targets: [file] });
+      process.exit(0);
+    }
+    auditAllowed({ tool: toolName, targets: [file] });
+  }
+  process.exit(0);
+}
+
+if (toolName === 'apply_patch') {
+  const patch = typeof rawToolInput === 'string'
+    ? rawToolInput
+    : (typeof toolInput.patch === 'string'
+      ? toolInput.patch
+      : (typeof toolInput.input === 'string' ? toolInput.input : ''));
+  const targets = Array.from(
+    patch.matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$|^\*\*\* Move to: (.+)$/gm),
+    (match) => relativeProjectPath(match[1] || match[2]),
+  );
+
+  if (targets.length === 0) {
+    deny(implementationDeniedReason(), { tool: toolName, targets: [] });
+  } else if (targets.some((file) => !file)) {
+    deny(outsideProjectTargetReason(), { tool: toolName, targets: targets.filter(Boolean) });
+  } else if (targets.some((file) => !isAllowedArtifact(file))) {
+    const scopedTargets = targets.filter((file) => !isAllowedArtifact(file));
+    const failure = scopedTargets
+      .map((file) => implementationScopeFailure(file, patch))
+      .find(Boolean);
+    if (failure) {
+      deny(failure, { tool: toolName, targets });
+      process.exit(0);
+    }
+    auditAllowed({ tool: toolName, targets: scopedTargets });
+  }
+  process.exit(0);
+}
+
+if (['Bash', 'exec_command', 'shell'].includes(toolName)) {
+  const commandValue = toolInput.command ?? toolInput.cmd;
+  const command = typeof commandValue === 'string'
+    ? commandValue.trim()
+    : (Array.isArray(commandValue) ? commandValue.join(' ').trim() : '');
+  const allowedReadOnly = [
+    /^pwd$/,
+    /^(ls|cat|head|tail|wc|rg|grep)(?:\s+\S+)*$/,
+    /^git\s+(status|diff|log|show|rev-parse|ls-files|grep)(?:\s+\S+)*$/,
+    /^(node|npm|pnpm|yarn|bun|python|python3|pip|pip3|uv|cargo|deno)\s+--version$/,
+    /^openspec\s+(--version|--help)$/,
+    /^openspec\s+(list|status|instructions|templates|schemas|show|validate)(?:\s+\S+)*$/,
+    /^openspec\s+new\s+change\s+[A-Za-z0-9][A-Za-z0-9._-]*(?:\s+\S+)*$/,
+  ];
+  const hasShellControl = /[\n\r;&|<>`]|\$\(/.test(command);
+  const allowed = !hasShellControl && (
+    isAllowedArtifactMkdirCommand(command) ||
+    allowedReadOnly.some((pattern) => pattern.test(command)) ||
+    isAllowedDiscoveryCommand(command) ||
+    isAllowedBrainstormingServer(command)
+  );
+
+  if (!allowed) {
+    const failure = implementationAuthorizationFailure();
+    if (failure) deny(failure, { tool: toolName, shell: redactShellCommand(command) });
+  }
+  process.exit(0);
+}
+
+if (toolName === 'write_stdin') {
+  const failure = implementationAuthorizationFailure();
+  if (failure) deny(failure, { tool: toolName });
+}
