@@ -1,0 +1,10 @@
+{
+  "allowedFiles": [
+    ".ai-workflow-bootstrap-version"
+  ],
+  "allowedDirs": [
+    "openspec/changes/bootstrap-011-smoke-chain"
+  ],
+  "allowedGlobs": [],
+  "anchors": {}
+}
