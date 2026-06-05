@@ -14,6 +14,11 @@ Read these files before starting any task:
 `AI_PROFILES.md` lists the active stack and domain policy documents. Read each
 listed document before planning implementation.
 
+Compact-layout installs keep the same documents under `.ai-workflow/docs/`:
+`workflow.md`, `risk-policy.md`, `security-baseline.md`,
+`context-budget-policy.md`, and `profiles.md`. When root policy documents are
+absent, use those compact paths as the canonical workflow documents.
+
 ## Required Stack
 
 - OpenSpec: specs, change proposals, implementation tasks, validation, archive.
@@ -87,11 +92,12 @@ At the start of a coding task in this repository:
 3. Verify local OpenSpec skills exist under `.codex/skills` or `.claude/skills`
    for the current agent.
 4. Verify project-local Superpowers skills exist under `.codex/skills` or
-   `.claude/skills`. Project-local SessionStart hooks should inject the
-   Superpowers bootstrap for Claude Code and Codex at startup, clear, and
-   compact events. If runtime skill invocation or automatic triggering is
-   unavailable, read the relevant local `SKILL.md` files and state that the
-   session is using manual Superpowers-compatible mode.
+   `.claude/skills`, or under `.ai-workflow/runtime/skills/<tool>/` in compact
+   layout. Project-local SessionStart hooks should inject the Superpowers
+   bootstrap for Claude Code and Codex at startup, clear, and compact events. If
+   runtime skill invocation or automatic triggering is unavailable, read the
+   relevant local `SKILL.md` files and state that the session is using manual
+   Superpowers-compatible mode.
 5. Read `RISK_POLICY.md`, `SECURITY_BASELINE.md`, `CONTEXT_BUDGET_POLICY.md`,
    `AI_PROFILES.md`, and each active profile document listed by the manifest.
 6. Before broad file reading, follow `CONTEXT_BUDGET_POLICY.md`. Build a file

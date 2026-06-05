@@ -1,0 +1,43 @@
+#!/usr/bin/env node
+const path = require('path');
+const {
+  activeChanges,
+  appendAudit,
+  projectRootFromHookDir,
+  readJson,
+  STATE_FILE,
+  workflowPath,
+} = require('./workflow-hook-lib');
+
+const installedProjectDir = projectRootFromHookDir(__dirname);
+const projectDir = path.resolve(process.env.CODEX_PROJECT_DIR || process.env.CLAUDE_PROJECT_DIR || installedProjectDir);
+const statePath = workflowPath(projectDir, STATE_FILE);
+const agent = process.env.CODEX_PROJECT_DIR ? 'codex' : 'claude';
+
+const changes = activeChanges(projectDir);
+const state = readJson(statePath, { changes: {} });
+const change = changes.includes(state.activeChange) ? state.activeChange : null;
+const approvedCheckpoint = change
+  ? Number(state.changes?.[change]?.approvedCheckpoint) || 0
+  : 0;
+
+if (!change || approvedCheckpoint < 2 || approvedCheckpoint >= 3) {
+  process.exit(0);
+}
+
+const reason = `Checkpoint 3 is required for ${change} before final delivery. Present verification evidence, then ask the user to reply with: CHECKPOINT APPROVE 3 ${change}`;
+appendAudit(projectDir, {
+  agent,
+  event: 'checkpoint.stop-blocked',
+  change,
+  decision: 'denied',
+  reason,
+}, { maxWaitMs: 200 });
+
+console.log(JSON.stringify({
+  hookSpecificOutput: {
+    hookEventName: 'Stop',
+    permissionDecision: 'deny',
+    permissionDecisionReason: reason,
+  },
+}));

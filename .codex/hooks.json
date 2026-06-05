@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CODEX_PROJECT_DIR:-$PWD}/.codex/hooks/superpowers-session-start\"",
+            "command": "\"${CODEX_PROJECT_DIR:-$PWD}/.ai-workflow/runtime/hooks/superpowers-session-start\"",
             "async": false
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CODEX_PROJECT_DIR:-$PWD}/.codex/hooks/workflow-checkpoint-record\"",
+            "command": "\"${CODEX_PROJECT_DIR:-$PWD}/.ai-workflow/runtime/hooks/workflow-checkpoint-record\"",
             "async": false
           }
         ]
@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CODEX_PROJECT_DIR:-$PWD}/.codex/hooks/workflow-checkpoint-gate\"",
+            "command": "\"${CODEX_PROJECT_DIR:-$PWD}/.ai-workflow/runtime/hooks/workflow-checkpoint-gate\"",
             "async": false
           }
         ]
@@ -40,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CODEX_PROJECT_DIR:-$PWD}/.codex/hooks/workflow-checkpoint-stop\"",
+            "command": "\"${CODEX_PROJECT_DIR:-$PWD}/.ai-workflow/runtime/hooks/workflow-checkpoint-stop\"",
             "async": false
           }
         ]

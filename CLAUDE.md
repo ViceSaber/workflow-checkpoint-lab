@@ -12,10 +12,16 @@ Read these files before starting any task:
 `AI_PROFILES.md` lists the active stack and domain policy documents. Read each
 listed document before planning implementation.
 
+Compact-layout installs keep the same documents under `.ai-workflow/docs/`:
+`workflow.md`, `risk-policy.md`, `security-baseline.md`,
+`context-budget-policy.md`, and `profiles.md`. When root policy documents are
+absent, use those compact paths as the canonical workflow documents.
+
 ## Required Stack
 
 - OpenSpec CLI and generated OpenSpec skills.
-- Project-local Superpowers skills under `.claude/skills/`.
+- Project-local Superpowers skills under `.claude/skills/`, or under
+  `.ai-workflow/runtime/skills/claude/` in compact layout.
 - Claude SessionStart hook that injects the local Superpowers bootstrap when
   Claude Code starts, clears, or compacts a session.
 - Claude checkpoint hooks that record approvals and gate ordinary
@@ -25,7 +31,8 @@ listed document before planning implementation.
 ## Claude Behavior
 
 1. Verify OpenSpec is available with `openspec --version` and `openspec list`.
-2. Verify project-local Superpowers skills exist under `.claude/skills/`.
+2. Verify project-local Superpowers skills exist under `.claude/skills/` or
+   `.ai-workflow/runtime/skills/claude/`.
 3. Prefer automatic Superpowers activation from the SessionStart hook. Then use
    `/using-superpowers` first when a task may match a Superpowers skill. If
    slash skill invocation is unavailable, read
@@ -59,6 +66,8 @@ Claude and Codex checkpoint commands are recorded locally per active OpenSpec
 change in `.claude/workflow-checkpoints.local.json`. Ordinary source writes and
 shell commands outside the pre-implementation allowlist remain blocked until
 Checkpoint 2 is approved.
+Compact-layout installs store the same checkpoint state under
+`.ai-workflow/state/workflow-checkpoints.local.json`.
 Checkpoint 1 requires passing OpenSpec validation. If `openspec validate <change-name> --strict` fails, fix the OpenSpec artifacts before asking for approval; do not continue to checkpoint approval and do not describe validation as non-blocking.
 Checkpoint 2 also binds the approved implementation scope. If
 `implementation-scope.json` is missing, malformed, changed after approval, or

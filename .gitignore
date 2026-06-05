@@ -11,3 +11,13 @@ coverage/
 .claude/workflow-checkpoints.local.json
 .claude/workflow-audit.local.jsonl
 .claude/workflow-checkpoints.local.lock/
+.ai-workflow/state/
+.ai-workflow/backups/
+.claude/skills/
+.codex/skills/
+.claude/hooks/
+.codex/hooks/
+.claude/commands/
+.agents/
+docs/superpowers/
+docs/ai-workflow/

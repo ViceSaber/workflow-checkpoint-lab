@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PARENT_TWO_UP="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_DIR="${CODEX_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-}}"
+if [ -z "$PROJECT_DIR" ]; then
+  if [ "$(basename "$PARENT_TWO_UP")" = ".ai-workflow" ]; then
+    PROJECT_DIR="$(cd "$PARENT_TWO_UP/.." && pwd)"
+  else
+    PROJECT_DIR="$PARENT_TWO_UP"
+  fi
+fi
+
+if [ -n "${CODEX_PROJECT_DIR:-}" ]; then
+  TOOL_NAME="codex"
+elif [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
+  TOOL_NAME="claude"
+else
+  TOOL_NAME="$(basename "$(cd "$SCRIPT_DIR/.." && pwd)")"
+  if [ "$TOOL_NAME" = "runtime" ]; then
+    TOOL_NAME="claude"
+  fi
+fi
+
+COMPACT_SKILL_ROOT=".ai-workflow/runtime/skills/$TOOL_NAME"
+LEGACY_TOOL_DIR=".$TOOL_NAME"
+LEGACY_SKILL_ROOT="$LEGACY_TOOL_DIR/skills"
+
+if [ -f "$PROJECT_DIR/$COMPACT_SKILL_ROOT/using-superpowers/SKILL.md" ]; then
+  SKILL_ROOT="$COMPACT_SKILL_ROOT"
+else
+  SKILL_ROOT="$LEGACY_SKILL_ROOT"
+fi
+USING_SUPERPOWERS="$PROJECT_DIR/$SKILL_ROOT/using-superpowers/SKILL.md"
+
+node - "$SKILL_ROOT" "$USING_SUPERPOWERS" <<'NODE'
+const fs = require('fs');
+
+const [skillRoot, usingSuperpowers] = process.argv.slice(2);
+const message = fs.existsSync(usingSuperpowers)
+  ? fs.readFileSync(usingSuperpowers, 'utf8')
+  : `Project-local Superpowers bootstrap is missing: ${usingSuperpowers}`;
+const additionalContext = [
+  '<EXTREMELY_IMPORTANT>',
+  `This project has project-local Superpowers skills under ${skillRoot}.`,
+  '',
+  'Use callable Superpowers skills when they are available. If a slash skill is unavailable, read the matching project-local SKILL.md and follow it manually. Do not claim a skill was invoked unless it actually was.',
+  '',
+  `Below is the full content of ${skillRoot}/using-superpowers/SKILL.md:`,
+  '',
+  message,
+  '</EXTREMELY_IMPORTANT>',
+].join('\n');
+
+process.stdout.write(`${JSON.stringify({
+  hookSpecificOutput: {
+    hookEventName: 'SessionStart',
+    additionalContext,
+  },
+}, null, 2)}\n`);
+NODE
