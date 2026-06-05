@@ -6,5 +6,5 @@
 - [x] Record Checkpoint 2 after implementation scope is present.
 - [x] Exercise implementation gate and Stop hook behavior.
 - [x] Run local lint, test, and build checks.
-- [ ] Push PR branch and verify GitHub Actions required check.
+- [x] Push PR branch and verify GitHub Actions required check.
 - [ ] Merge through protected main.
