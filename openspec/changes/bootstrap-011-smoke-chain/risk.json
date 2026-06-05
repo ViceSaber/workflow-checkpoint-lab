@@ -1,0 +1,14 @@
+{
+  "level": "L1",
+  "reasons": [
+    "Workflow metadata and validation artifact update only"
+  ],
+  "higherRiskExclusions": [
+    "No user-visible application behavior changes",
+    "No authentication or authorization changes",
+    "No dependency or production configuration changes",
+    "No external service integration changes"
+  ],
+  "profiles": [],
+  "rollback": "Revert the bootstrap metadata and smoke-chain OpenSpec files"
+}
