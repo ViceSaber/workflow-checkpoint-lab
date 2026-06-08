@@ -2,22 +2,17 @@
 
 You are working in this repository as an AI coding agent.
 
-This project uses the canonical workflow in `AI_WORKFLOW.md`.
+This project uses the canonical workflow in `.ai-workflow/docs/workflow.md`.
 Read these files before starting any task:
 
-- `AI_WORKFLOW.md`
-- `RISK_POLICY.md`
-- `SECURITY_BASELINE.md`
-- `CONTEXT_BUDGET_POLICY.md`
-- `AI_PROFILES.md`
+- `.ai-workflow/docs/workflow.md`
+- `.ai-workflow/docs/risk-policy.md`
+- `.ai-workflow/docs/security-baseline.md`
+- `.ai-workflow/docs/context-budget-policy.md`
+- `.ai-workflow/docs/profiles.md`
 
-`AI_PROFILES.md` lists the active stack and domain policy documents. Read each
-listed document before planning implementation.
-
-Compact-layout installs keep the same documents under `.ai-workflow/docs/`:
-`workflow.md`, `risk-policy.md`, `security-baseline.md`,
-`context-budget-policy.md`, and `profiles.md`. When root policy documents are
-absent, use those compact paths as the canonical workflow documents.
+`.ai-workflow/docs/profiles.md` lists the active stack and domain policy
+documents. Read each listed document before planning implementation.
 
 ## Required Stack
 
@@ -28,12 +23,13 @@ absent, use those compact paths as the canonical workflow documents.
 
 ## Core Rules
 
-1. Treat `AI_WORKFLOW.md` as the source of truth for process.
+1. Treat `.ai-workflow/docs/workflow.md` as the source of truth for process.
 2. Treat `openspec/` as the source of truth for requirements and active changes.
 3. For feature work, behavior changes, or bug fixes, start with OpenSpec and
    relevant Superpowers skills before implementation.
-4. Classify the task with `RISK_POLICY.md` before implementation. Apply the
-   stricter rule when a stack or domain profile raises the required level.
+4. Classify the task with `.ai-workflow/docs/risk-policy.md` before
+   implementation. Apply the stricter rule when a stack or domain profile raises
+   the required level.
 5. Do not write implementation code before Checkpoint 1 and Checkpoint 2 are
    approved, unless the user explicitly says to skip checkpoints for this task.
 6. Use OpenSpec-native paths:
@@ -98,11 +94,15 @@ At the start of a coding task in this repository:
    runtime skill invocation or automatic triggering is unavailable, read the
    relevant local `SKILL.md` files and state that the session is using manual
    Superpowers-compatible mode.
-5. Read `RISK_POLICY.md`, `SECURITY_BASELINE.md`, `CONTEXT_BUDGET_POLICY.md`,
-   `AI_PROFILES.md`, and each active profile document listed by the manifest.
-6. Before broad file reading, follow `CONTEXT_BUDGET_POLICY.md`. Build a file
-   map with read-only discovery commands first, then full-read only files needed
-   for the approved planning scope.
+5. Read `.ai-workflow/docs/risk-policy.md`,
+   `.ai-workflow/docs/security-baseline.md`,
+   `.ai-workflow/docs/context-budget-policy.md`,
+   `.ai-workflow/docs/profiles.md`, and each active profile document listed by
+   the manifest.
+6. Before broad file reading, follow
+   `.ai-workflow/docs/context-budget-policy.md`. Build a file map with read-only
+   discovery commands first, then full-read only files needed for the approved
+   planning scope.
 7. Create and review `openspec/changes/<change-name>/risk.json`. If it changes
    after approval, stop implementation and repeat the required approvals.
 8. Before Checkpoint 2, create and review

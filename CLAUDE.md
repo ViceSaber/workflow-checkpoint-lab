@@ -1,21 +1,16 @@
 # CLAUDE.md
 
-This repository uses the canonical workflow in `AI_WORKFLOW.md`.
+This repository uses the canonical workflow in `.ai-workflow/docs/workflow.md`.
 Read these files before starting any task:
 
-- `AI_WORKFLOW.md`
-- `RISK_POLICY.md`
-- `SECURITY_BASELINE.md`
-- `CONTEXT_BUDGET_POLICY.md`
-- `AI_PROFILES.md`
+- `.ai-workflow/docs/workflow.md`
+- `.ai-workflow/docs/risk-policy.md`
+- `.ai-workflow/docs/security-baseline.md`
+- `.ai-workflow/docs/context-budget-policy.md`
+- `.ai-workflow/docs/profiles.md`
 
-`AI_PROFILES.md` lists the active stack and domain policy documents. Read each
-listed document before planning implementation.
-
-Compact-layout installs keep the same documents under `.ai-workflow/docs/`:
-`workflow.md`, `risk-policy.md`, `security-baseline.md`,
-`context-budget-policy.md`, and `profiles.md`. When root policy documents are
-absent, use those compact paths as the canonical workflow documents.
+`.ai-workflow/docs/profiles.md` lists the active stack and domain policy
+documents. Read each listed document before planning implementation.
 
 ## Required Stack
 
@@ -40,8 +35,9 @@ absent, use those compact paths as the canonical workflow documents.
    Do not claim Superpowers was invoked unless it actually was.
 4. For new features, behavior changes, bug fixes, or substantial refactors, use
    `/brainstorming` and the OpenSpec propose flow before coding.
-5. Classify the task with `RISK_POLICY.md` before implementation. Apply the
-   stricter rule when an active profile raises the required level.
+5. Classify the task with `.ai-workflow/docs/risk-policy.md` before
+   implementation. Apply the stricter rule when an active profile raises the
+   required level.
 6. Use OpenSpec-native changes under `openspec/changes/<change-name>/`.
    Create and maintain `risk.json` under that change. Present its level, reasons,
    higher-risk exclusions, profile metadata, and rollback for human review.
@@ -56,18 +52,17 @@ absent, use those compact paths as the canonical workflow documents.
    read and followed manually.
 10. Run `openspec validate <change-name>` and the project test command before
    final delivery when applicable.
-11. Before broad file reading, follow `CONTEXT_BUDGET_POLICY.md`. Build a file
-    map with read-only discovery commands first, then full-read only files
-    needed for the approved planning scope.
+11. Before broad file reading, follow
+    `.ai-workflow/docs/context-budget-policy.md`. Build a file map with
+    read-only discovery commands first, then full-read only files needed for the
+    approved planning scope.
 
 ## Checkpoint Guards
 
 Claude and Codex checkpoint commands are recorded locally per active OpenSpec
-change in `.claude/workflow-checkpoints.local.json`. Ordinary source writes and
-shell commands outside the pre-implementation allowlist remain blocked until
-Checkpoint 2 is approved.
-Compact-layout installs store the same checkpoint state under
-`.ai-workflow/state/workflow-checkpoints.local.json`.
+change in `.ai-workflow/state/workflow-checkpoints.local.json`. Ordinary source
+writes and shell commands outside the pre-implementation allowlist remain
+blocked until Checkpoint 2 is approved.
 Checkpoint 1 requires passing OpenSpec validation. If `openspec validate <change-name> --strict` fails, fix the OpenSpec artifacts before asking for approval; do not continue to checkpoint approval and do not describe validation as non-blocking.
 Checkpoint 2 also binds the approved implementation scope. If
 `implementation-scope.json` is missing, malformed, changed after approval, or

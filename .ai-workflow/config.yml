@@ -1,5 +1,5 @@
 layout: compact
-version: "0.2.3"
+version: "0.4.0"
 profiles:
   stacks: []
   domains: []

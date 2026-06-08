@@ -68,7 +68,8 @@ Examples:
 Action:
 
 - Include the files and verification commands in the implementation plan.
-- Execute after the normal workflow approval required by `AI_WORKFLOW.md`.
+- Execute after the normal workflow approval required by
+  `.ai-workflow/docs/workflow.md`.
 
 ## L2: Behavior-Changing Modification
 

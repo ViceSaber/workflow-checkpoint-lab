@@ -81,10 +81,13 @@ active selection; it does not delete or archive OpenSpec artifacts.
 ## Phase 0: Context And Skill Selection
 
 1. Read this file and the relevant OpenSpec files.
-2. Read `RISK_POLICY.md`, `SECURITY_BASELINE.md`, `CONTEXT_BUDGET_POLICY.md`,
-   `AI_PROFILES.md`, and each active profile document listed by the manifest.
-3. Classify the task with `RISK_POLICY.md`. Apply the stricter rule when an
-   active stack or domain profile raises the required risk level.
+2. Read `.ai-workflow/docs/risk-policy.md`,
+   `.ai-workflow/docs/security-baseline.md`,
+   `.ai-workflow/docs/context-budget-policy.md`,
+   `.ai-workflow/docs/profiles.md`, and each active profile document listed by
+   the manifest.
+3. Classify the task with `.ai-workflow/docs/risk-policy.md`. Apply the stricter
+   rule when an active stack or domain profile raises the required risk level.
 4. Create or update `openspec/changes/<change-name>/risk.json`. Include reasons,
    exclusions for higher levels, active profile metadata, and rollback.
 5. Verify OpenSpec is installed with `openspec --version`.
@@ -187,9 +190,9 @@ Required actions:
    - lint or static-analysis command, or explicitly note its absence
    - build or type-check command, or explicitly note its absence
 8. Record these commands in the implementation plan.
-9. Follow `CONTEXT_BUDGET_POLICY.md`. Build a file map with read-only discovery
-   commands before broad reading. Record a Context Review in the implementation
-   plan:
+9. Follow `.ai-workflow/docs/context-budget-policy.md`. Build a file map with
+   read-only discovery commands before broad reading. Record a Context Review in
+   the implementation plan:
    - file map
    - full-read files and reasons
    - selective-read files
