@@ -38,18 +38,18 @@ node - "$SKILL_ROOT" "$USING_SUPERPOWERS" <<'NODE'
 const fs = require('fs');
 
 const [skillRoot, usingSuperpowers] = process.argv.slice(2);
-const message = fs.existsSync(usingSuperpowers)
-  ? fs.readFileSync(usingSuperpowers, 'utf8')
-  : `Project-local Superpowers bootstrap is missing: ${usingSuperpowers}`;
+const skillExists = fs.existsSync(usingSuperpowers);
 const additionalContext = [
   '<EXTREMELY_IMPORTANT>',
   `This project has project-local Superpowers skills under ${skillRoot}.`,
   '',
-  'Use callable Superpowers skills when they are available. If a slash skill is unavailable, read the matching project-local SKILL.md and follow it manually. Do not claim a skill was invoked unless it actually was.',
+  'Use callable Superpowers skills when they are available.',
+  `When a task may match a Superpowers skill, read ${skillRoot}/using-superpowers/SKILL.md first, then follow the matching local SKILL.md files as needed.`,
+  'Do not claim a skill was invoked unless it actually was.',
   '',
-  `Below is the full content of ${skillRoot}/using-superpowers/SKILL.md:`,
-  '',
-  message,
+  skillExists
+    ? `Project-local bootstrap skill path: ${skillRoot}/using-superpowers/SKILL.md`
+    : `Project-local Superpowers bootstrap is missing: ${usingSuperpowers}`,
   '</EXTREMELY_IMPORTANT>',
 ].join('\n');
 

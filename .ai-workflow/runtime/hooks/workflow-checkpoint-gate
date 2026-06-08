@@ -255,6 +255,15 @@ function isAllowedDiscoveryCommand(command) {
   return false;
 }
 
+function isAllowedSedReadCommand(command) {
+  const words = splitShellWords(command);
+  if (!words || words.length < 2 || words[0] !== 'sed') return false;
+  return !words.slice(1).some((word) =>
+    word.startsWith('-i') ||
+    word === '--in-place' ||
+    word.startsWith('--in-place='));
+}
+
 function splitShellWords(command) {
   const words = [];
   let current = '';
@@ -407,7 +416,7 @@ if (['Bash', 'exec_command', 'shell'].includes(toolName)) {
     : (Array.isArray(commandValue) ? commandValue.join(' ').trim() : '');
   const allowedReadOnly = [
     /^pwd$/,
-    /^(ls|cat|head|tail|wc|rg|grep)(?:\s+\S+)*$/,
+    /^(ls|cat|head|tail|wc|rg|grep|nl)(?:\s+\S+)*$/,
     /^git\s+(status|diff|log|show|rev-parse|ls-files|grep)(?:\s+\S+)*$/,
     /^(node|npm|pnpm|yarn|bun|python|python3|pip|pip3|uv|cargo|deno)\s+--version$/,
     /^openspec\s+(--version|--help)$/,
@@ -418,6 +427,7 @@ if (['Bash', 'exec_command', 'shell'].includes(toolName)) {
   const allowed = !hasShellControl && (
     isAllowedArtifactMkdirCommand(command) ||
     allowedReadOnly.some((pattern) => pattern.test(command)) ||
+    isAllowedSedReadCommand(command) ||
     isAllowedDiscoveryCommand(command) ||
     isAllowedBrainstormingServer(command)
   );
