@@ -1,21 +1,22 @@
 # CLAUDE.md
 
-This repository uses the canonical workflow in `AI_WORKFLOW.md`.
+This repository uses the canonical workflow in `.ai-workflow/docs/workflow.md`.
 Read these files before starting any task:
 
-- `AI_WORKFLOW.md`
-- `RISK_POLICY.md`
-- `SECURITY_BASELINE.md`
-- `CONTEXT_BUDGET_POLICY.md`
-- `AI_PROFILES.md`
+- `.ai-workflow/docs/workflow.md`
+- `.ai-workflow/docs/risk-policy.md`
+- `.ai-workflow/docs/security-baseline.md`
+- `.ai-workflow/docs/context-budget-policy.md`
+- `.ai-workflow/docs/profiles.md`
 
-`AI_PROFILES.md` lists the active stack and domain policy documents. Read each
-listed document before planning implementation.
+`.ai-workflow/docs/profiles.md` lists the active stack and domain policy
+documents. Read each listed document before planning implementation.
 
 ## Required Stack
 
 - OpenSpec CLI and generated OpenSpec skills.
-- Project-local Superpowers skills under `.claude/skills/`.
+- Project-local Superpowers skills under `.claude/skills/`, or under
+  `.ai-workflow/runtime/skills/claude/` in compact layout.
 - Claude SessionStart hook that injects the local Superpowers bootstrap when
   Claude Code starts, clears, or compacts a session.
 - Claude checkpoint hooks that record approvals and gate ordinary
@@ -25,7 +26,8 @@ listed document before planning implementation.
 ## Claude Behavior
 
 1. Verify OpenSpec is available with `openspec --version` and `openspec list`.
-2. Verify project-local Superpowers skills exist under `.claude/skills/`.
+2. Verify project-local Superpowers skills exist under `.claude/skills/` or
+   `.ai-workflow/runtime/skills/claude/`.
 3. Prefer automatic Superpowers activation from the SessionStart hook. Then use
    `/using-superpowers` first when a task may match a Superpowers skill. If
    slash skill invocation is unavailable, read
@@ -33,11 +35,16 @@ listed document before planning implementation.
    Do not claim Superpowers was invoked unless it actually was.
 4. For new features, behavior changes, bug fixes, or substantial refactors, use
    `/brainstorming` and the OpenSpec propose flow before coding.
-5. Classify the task with `RISK_POLICY.md` before implementation. Apply the
-   stricter rule when an active profile raises the required level.
+5. Classify the task with `.ai-workflow/docs/risk-policy.md` before
+   implementation. Apply the stricter rule when an active profile raises the
+   required level.
 6. Use OpenSpec-native changes under `openspec/changes/<change-name>/`.
    Create and maintain `risk.json` under that change. Present its level, reasons,
    higher-risk exclusions, profile metadata, and rollback for human review.
+   Before Checkpoint 1, write only the proposal package:
+   `proposal.md`, `design.md`, `tasks.md`, `risk.json`, `.openspec.yaml` when
+   needed, and `specs/**/spec.md`. Do not include `implementation-scope.json`
+   in the same patch.
 7. Before Checkpoint 2, create and maintain
    `implementation-scope.json` under that change. It must list the exact
    implementation files, directories, globs, and optional anchors that the
@@ -49,16 +56,17 @@ listed document before planning implementation.
    read and followed manually.
 10. Run `openspec validate <change-name>` and the project test command before
    final delivery when applicable.
-11. Before broad file reading, follow `CONTEXT_BUDGET_POLICY.md`. Build a file
-    map with read-only discovery commands first, then full-read only files
-    needed for the approved planning scope.
+11. Before broad file reading, follow
+    `.ai-workflow/docs/context-budget-policy.md`. Build a file map with
+    read-only discovery commands first, then full-read only files needed for the
+    approved planning scope.
 
 ## Checkpoint Guards
 
 Claude and Codex checkpoint commands are recorded locally per active OpenSpec
-change in `.claude/workflow-checkpoints.local.json`. Ordinary source writes and
-shell commands outside the pre-implementation allowlist remain blocked until
-Checkpoint 2 is approved.
+change in `.ai-workflow/state/workflow-checkpoints.local.json`. Ordinary source
+writes and shell commands outside the pre-implementation allowlist remain
+blocked until Checkpoint 2 is approved.
 Checkpoint 1 requires passing OpenSpec validation. If `openspec validate <change-name> --strict` fails, fix the OpenSpec artifacts before asking for approval; do not continue to checkpoint approval and do not describe validation as non-blocking.
 Checkpoint 2 also binds the approved implementation scope. If
 `implementation-scope.json` is missing, malformed, changed after approval, or

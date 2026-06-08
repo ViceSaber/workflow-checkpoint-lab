@@ -1,0 +1,7 @@
+layout: compact
+version: "0.4.2"
+profiles:
+  stacks: []
+  domains: []
+compatibility:
+  mode: local-copy

@@ -1,0 +1,74 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite:*)",
+      "Bash(npx vitest:*)",
+      "Bash(openspec --help)",
+      "Bash(openspec --version)",
+      "Bash(openspec archive:*)",
+      "Bash(openspec change:*)",
+      "Bash(openspec init:*)",
+      "Bash(openspec instructions:*)",
+      "Bash(openspec list:*)",
+      "Bash(openspec new:*)",
+      "Bash(openspec schemas:*)",
+      "Bash(openspec show:*)",
+      "Bash(openspec status:*)",
+      "Bash(openspec templates:*)",
+      "Bash(openspec update:*)",
+      "Bash(openspec validate:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-$PWD}/.ai-workflow/runtime/hooks/superpowers-session-start\"",
+            "async": false
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-$PWD}/.ai-workflow/runtime/hooks/workflow-checkpoint-record\"",
+            "async": false
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-$PWD}/.ai-workflow/runtime/hooks/workflow-checkpoint-gate\"",
+            "async": false
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-$PWD}/.ai-workflow/runtime/hooks/workflow-checkpoint-stop\"",
+            "async": false
+          }
+        ]
+      }
+    ]
+  }
+}
