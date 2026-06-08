@@ -36,9 +36,13 @@ documents. Read each listed document before planning implementation.
    - `openspec/changes/<change-name>/proposal.md`
    - `openspec/changes/<change-name>/design.md`
    - `openspec/changes/<change-name>/risk.json`
-   - `openspec/changes/<change-name>/implementation-scope.json`
+   - `openspec/changes/<change-name>/.openspec.yaml`
    - `openspec/changes/<change-name>/specs/**/spec.md`
    - `openspec/changes/<change-name>/tasks.md`
+   Write only these Checkpoint 1 preparation artifacts before Checkpoint 1
+   approval. Do not include
+   `openspec/changes/<change-name>/implementation-scope.json` or other
+   implementation planning artifacts in the same patch.
 7. Run `openspec validate <change-name>` before final delivery when a change is
    active.
 8. Run the project test command before claiming implementation is complete.

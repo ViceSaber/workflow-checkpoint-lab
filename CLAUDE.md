@@ -41,6 +41,10 @@ documents. Read each listed document before planning implementation.
 6. Use OpenSpec-native changes under `openspec/changes/<change-name>/`.
    Create and maintain `risk.json` under that change. Present its level, reasons,
    higher-risk exclusions, profile metadata, and rollback for human review.
+   Before Checkpoint 1, write only the proposal package:
+   `proposal.md`, `design.md`, `tasks.md`, `risk.json`, `.openspec.yaml` when
+   needed, and `specs/**/spec.md`. Do not include `implementation-scope.json`
+   in the same patch.
 7. Before Checkpoint 2, create and maintain
    `implementation-scope.json` under that change. It must list the exact
    implementation files, directories, globs, and optional anchors that the

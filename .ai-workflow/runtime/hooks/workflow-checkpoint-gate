@@ -69,7 +69,7 @@ function isBrainstormingContent(file) {
   return ['.html', '.css', '.js', '.json', '.md'].includes(ext);
 }
 
-const OPENSPEC_CHANGE_TOP = ['proposal.md', 'design.md', 'tasks.md', 'risk.json'];
+const OPENSPEC_CHANGE_TOP = ['proposal.md', 'design.md', 'tasks.md', 'risk.json', '.openspec.yaml'];
 const OPENSPEC_CHANGE_POST_CP1 = [
   'implementation-plan.md',
   'test-plan.md',
@@ -104,10 +104,20 @@ function isAllowedArtifact(file) {
   return false;
 }
 
+function isPostCheckpointOneArtifact(file) {
+  const match = file?.match(/^openspec\/changes\/[^/]+\/(.+)$/);
+  return Boolean(match && OPENSPEC_CHANGE_POST_CP1.includes(match[1]));
+}
+
 function implementationDeniedReason() {
   return approvedCheckpoint >= 1
     ? 'Checkpoint 2 approval is required before implementation changes.'
     : 'Checkpoint 1 approval is required before implementation planning, and Checkpoint 2 approval is required before implementation changes.';
+}
+
+function implementationPlanningDeniedReason(file) {
+  if (approvedCheckpoint >= 1 || !isPostCheckpointOneArtifact(file)) return null;
+  return 'Checkpoint 1 approval is required before implementation planning artifacts. Split the patch: write proposal.md, design.md, tasks.md, risk.json, .openspec.yaml, and specs/**/spec.md first; run openspec validate; then approve Checkpoint 1 before writing implementation-scope.json or implementation plans.';
 }
 
 function implementationAuthorizationFailure() {
@@ -369,6 +379,11 @@ if (['Write', 'Edit', 'MultiEdit'].includes(toolName)) {
   } else if (!file) {
     deny(outsideProjectTargetReason(), { tool: toolName, targets: [] });
   } else if (!isAllowedArtifact(file)) {
+    const planningFailure = implementationPlanningDeniedReason(file);
+    if (planningFailure) {
+      deny(planningFailure, { tool: toolName, targets: [file] });
+      process.exit(0);
+    }
     const changedText = changedRegionForTool(file, toolName, toolInput);
     const failure = implementationScopeFailure(file, changedText);
     if (failure) {
@@ -397,6 +412,13 @@ if (toolName === 'apply_patch') {
     deny(outsideProjectTargetReason(), { tool: toolName, targets: targets.filter(Boolean) });
   } else if (targets.some((file) => !isAllowedArtifact(file))) {
     const scopedTargets = targets.filter((file) => !isAllowedArtifact(file));
+    const planningFailure = scopedTargets
+      .map((file) => implementationPlanningDeniedReason(file))
+      .find(Boolean);
+    if (planningFailure) {
+      deny(planningFailure, { tool: toolName, targets });
+      process.exit(0);
+    }
     const failure = scopedTargets
       .map((file) => implementationScopeFailure(file, patch))
       .find(Boolean);

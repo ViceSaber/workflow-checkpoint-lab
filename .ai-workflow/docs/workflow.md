@@ -121,8 +121,13 @@ Required actions:
    - `proposal.md`
    - `design.md`
    - `risk.json`
+   - `.openspec.yaml` when OpenSpec creates or requires it
    - `specs/**/spec.md`
    - `tasks.md`
+   Do not include `implementation-scope.json`, `implementation-plan.md`,
+   `test-plan.md`, or `risk-notes.md` in the same write or patch as
+   Checkpoint 1 preparation artifacts. Those are implementation planning
+   artifacts and must wait until Checkpoint 1 is approved.
 3. Review `risk.json` with the user. State the selected risk level, reasons,
    exclusions for higher levels, active profile metadata, and rollback.
 4. Ensure specs use OpenSpec requirements and scenarios:
